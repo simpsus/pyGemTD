@@ -120,8 +120,8 @@ class Tile(object):
 		self.color = colors['ground_waypoint']
 		self.type = WAYPOINT
 
-	def path(self):
-		self.color = colors['ground_path']
+	def path(self, color = colors['ground_path']):
+		self.color = color
 
 	def __repr__(self):
 		return '('+str(self.x) + ',' + str(self.y) + ')'
@@ -186,8 +186,10 @@ class Game(object):
 		#print(self.path)
 
 	def show_path(self):
-		for tile in self.path:
-			tile.path()
+		total = len(self.path)
+		for i, tile in enumerate(self.path):
+			c = round((i/total) * 255)
+			tile.path(color=(c,c,c))
 
 	def clear_path(self):
 		# blocked tiles cannot be cleared
