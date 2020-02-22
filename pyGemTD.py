@@ -14,6 +14,7 @@ colors = {
 	'tower' : pygame.Color('#1c353b'),
 	'ground_path' : pygame.Color('#666666'),
 	'ground_blocked' : pygame.Color('#AA6666'),
+	'ground_waypoint' : pygame.Color('#FF0000'),
 	'skill_coldAuraBlast' : pygame.Color('#2DAFED'),
 	'skill_arcWave' : pygame.Color('#ECA26A'),
 	'ground_path' : pygame.Color('#e0bd3e'),
@@ -116,7 +117,7 @@ class Tile(object):
 		self.type = BLOCKED
 
 	def waypoint(self):
-		self.color = colors['ground_blocked']
+		self.color = colors['ground_waypoint']
 		self.type = WAYPOINT
 
 	def path(self):
