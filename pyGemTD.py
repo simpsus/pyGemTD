@@ -156,6 +156,8 @@ class Creep(object):
 		self.dead = False
 
 	def activate(self):
+		#activating sets the position to the first item in the path, the destination to the second
+		#and updates the path to the remainder
 		self.active = True
 		self.pos = (round(self.path[0].x * tile_multiplier + 0.5 * tile_multiplier), \
 			round(self.path[0].y * tile_multiplier + 0.5 * tile_multiplier))
@@ -176,6 +178,7 @@ class Creep(object):
 		#pos and current_destination are tuples, not objects
 		#the coordinates of the path have to be translated to screen coordinates
 		#logger.debug('Creep Position before update: ' + str(self.pos) + '. Destination ' + str(self.current_destination))
+		#check if we are done with the path, if so, breach
 		if cartesian_distance(self.pos, self.current_destination) <= self.speed:
 			if len(self.path) == 0:
 				self.breach()
