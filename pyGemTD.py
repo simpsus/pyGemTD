@@ -15,6 +15,7 @@ colors = {
 	'ground_path' : pygame.Color('#666666'),
 	'ground_blocked' : pygame.Color('#AA6666'),
 	'ground_waypoint' : pygame.Color('#FF0000'),
+	'text_waypoint' : pygame.Color('#FFD300'),
 	'skill_coldAuraBlast' : pygame.Color('#2DAFED'),
 	'skill_arcWave' : pygame.Color('#ECA26A'),
 	'ground_path' : pygame.Color('#e0bd3e'),
@@ -105,7 +106,7 @@ class Tile(object):
 	def draw(self, surface):
 		pygame.draw.rect(surface, self.color, self.rect, 0)
 		if self.text:
-			textsurface = arial_font.render(self.text, True, (0,0,0))
+			textsurface = arial_font.render(self.text, True, colors['text_waypoint'])
 			surface.blit(textsurface, self.rect.midtop)
 
 	def clear(self):
