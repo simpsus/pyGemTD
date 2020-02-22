@@ -199,6 +199,9 @@ class Game(object):
 		return self.grid[(pos[0]//10,pos[1]//10)]
 
 game = Game()
+game.make_path()
+game.show_waypoints()
+game.show_path()
 terminated = False
 logging.debug('Space triggers a path update. Left mouse button to block a tile.')
 while not terminated:
