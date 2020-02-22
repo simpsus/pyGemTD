@@ -216,7 +216,10 @@ while not terminated:
 				game.show_path()
 		elif event.type == pygame.MOUSEBUTTONDOWN:
 			tile = game.get_tile_for_position(pygame.mouse.get_pos())
-			tile.block()
+			if tile.type == BLOCKED:
+				tile.clear()
+			elif tile.type != WAYPOINT:
+				tile.block()
 	for b in background:
 		b.draw(display)
 	pygame.display.update()
