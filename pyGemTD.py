@@ -32,8 +32,6 @@ arial_font = pygame.font.SysFont('arial',10)
 
 # render queue for background entities
 background = []
-# render queue for active creeps
-active_creeps = []
 
 # grid tile types
 FREE = 'F'
@@ -153,6 +151,10 @@ class Wave(object):
 		self.active = False
 		#a flag indicating if this wave is released, a wave is released when all the creeps are on their way
 		self.released = False
+		# the path is not required at creation time (may change since then) but has to be set before creeps
+		# can be sent. Is the same for all creeps in the wave
+		self.path = []
+		logger.debug('Created Wave ' + str(id(self)) + ' with ' + str(self.size) + ' creeps and ' + str(self.gap) + ' ticks gap.')
 
 	def update(self):
 		#Assumption: update is only called when the wave is active and has the task to
@@ -160,16 +162,29 @@ class Wave(object):
 		# manage the lifecycle of the creeps
 		# keep the wave flags active/released correct
 		if not self.released:
-			if gap_ticker == gap:
+			if self.gap_ticker == self.gap:
 				creep = self.creep_generator()
+				creep.path = self.path[:]
 				creep.activate()
 				self.creeps.append(creep)
-				gap_ticker = 0
+				self.gap_ticker = 0
+				logger.debug('Wave ' + str(id(self)) + ' releases creep ' + str(creep))
 				if len(self.creeps) == self.size:
+					logger.debug('Wave ' + str(id(self)) + ' has released all of its creeps.')
 					self.released = True
 			else:
-				gap_ticker += 1
+				self.gap_ticker += 1
 		# assumption: creeps keep their flags (active, dead, breached) updates themselves
+		for c in [c for c in self.creeps if c.active]:
+			c.update()
+		# recalculate if a creep is now inactive (optimization potential ...)
+		if len([c for c in self.creeps if c.active]) == 0:
+			#logger.debug('Wave ' + str(id(self)) + ' has no more active creeps.')
+			self.active = False
+
+	def draw(self, surface):
+		for c in [c for c in self.creeps if c.active]:
+			c.draw(surface)
 
 
 
@@ -208,11 +223,13 @@ class Creep(object):
 		self.current_destination = (round(self.path[1].x * tile_multiplier + 0.5 * tile_multiplier), \
 			round(self.path[1].y * tile_multiplier + 0.5 * tile_multiplier))
 		self.path = self.path[2:]
+		logger.debug('Creep ' + str(self) + ' is now active.')
 
 	def die(self):
 		self.active = False
 
 	def breach(self):
+		logger.debug('Creep ' + str(self) + ' has breached.')
 		self.breached = True
 		self.active = False
 
@@ -268,8 +285,8 @@ class Game(object):
 		self.waypoints = [(10,5),(10,50),(90,50),(90,5),(50,5),(50,80)]
 		self.end = (99,80)
 		self.path = []
-		# the creeps currently in the game. TODO change to (to be implemented) Wave
-		self.current_creeps = []
+		# the waves currently active
+		self.current_waves = []
 
 	def show_waypoints(self):
 		"""
@@ -331,33 +348,24 @@ class Game(object):
 	def get_tile_for_position(self, pos):
 		return self.grid[(pos[0]//tile_multiplier,pos[1]//tile_multiplier)]
 
-	def process_breach(self, creep):
-		logger.debug('Creep breached: ' + str(creep))
-		self.current_creeps.remove(creep)
-		active_creeps.remove(c)
-		logger.debug('Creep ' + str(c) + ' removed from active creeps.')
-
-
 	def update(self):
-		#update the list of creeps
-		for c in self.current_creeps:
-			c.update()
-			if c.breached:
-				self.process_breach(c)
+		#update the current waves
+		for wave in self.current_waves:
+			wave.update()
+		
 
 game = Game()
 game.make_path()
 game.show_waypoints()
 game.show_path()
-logger.debug('Creating and activating test creep')
-creep = Creep(100,2,'NORMAL')
-creep.path = game.path[:]
-creep.activate()
-game.current_creeps.append(creep)
-active_creeps.append(creep)
-logger.debug('Active Creeps ' + str(active_creeps))
+
+logger.debug('Creating and activating test wave')
+c_gen = lambda : Creep(100,2,'NORMAL')
+wave = Wave(10, c_gen, 60)
+wave.path = game.path
+game.current_waves.append(wave)
+
 terminated = False
-#Path updates will not affect the debug creep
 while not terminated:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -377,8 +385,8 @@ while not terminated:
 	game.update()
 	for b in background:
 		b.draw(display)
-	for c in active_creeps:
-		c.draw(display)
+	# this is temporary for testing purpose
+	wave.draw(display)
 	pygame.display.update()
 	clock.tick(60)
 
