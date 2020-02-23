@@ -130,6 +130,50 @@ class Tile(object):
 	def __repr__(self):
 		return '('+str(self.x) + ',' + str(self.y) + ')'
 
+class Wave(object):
+	"""
+	A wave is a group of creeps.
+	A wave is started by the game
+	Assumption: As there is no building/removing of blocks during a wave, the path of all creeps in one
+	wave is the same. 
+	"""
+
+	def __init__(self, size, creep_generator, gap):
+		#the size is the number of creeps in this wave
+		self.size = size
+		#the creep generator is a function without argument that will create creeps for this wave
+		self.creep_generator = creep_generator
+		#the gap is the number of ticks that passes between creeps starting
+		self.gap = gap
+		#the gap_ticker is the counter looping the gap
+		self.gap_ticker = 0
+		#the creeps in ths wave
+		self.creeps = []
+		#a flag indicating if this wave is active, a wave is active when there are still creeps active
+		self.active = False
+		#a flag indicating if this wave is released, a wave is released when all the creeps are on their way
+		self.released = False
+
+	def update(self):
+		#Assumption: update is only called when the wave is active and has the task to
+		# create creeps until all are there
+		# manage the lifecycle of the creeps
+		# keep the wave flags active/released correct
+		if not self.released:
+			if gap_ticker == gap:
+				creep = self.creep_generator()
+				creep.activate()
+				self.creeps.append(creep)
+				gap_ticker = 0
+				if len(self.creeps) == self.size:
+					self.released = True
+			else:
+				gap_ticker += 1
+		# assumption: creeps keep their flags (active, dead, breached) updates themselves
+
+
+
+
 class Creep(object):
 
 	def __init__(self, hp, speed, creep_type):
