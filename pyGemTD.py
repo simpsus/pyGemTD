@@ -178,7 +178,7 @@ class Wave(object):
 		for c in [c for c in self.creeps if c.active]:
 			c.update()
 		# recalculate if a creep is now inactive (optimization potential ...)
-		if len([c for c in self.creeps if c.active]) == 0:
+		if self.released and len([c for c in self.creeps if c.active]) == 0:
 			#logger.debug('Wave ' + str(id(self)) + ' has no more active creeps.')
 			self.active = False
 
@@ -354,6 +354,9 @@ class Game(object):
 		#update the current waves
 		for wave in self.current_waves:
 			wave.update()
+			if not wave.active:
+				logger.debug(str(wave) + ' is no longer active')
+		self.current_waves = [w for w in self.current_waves if w.active]
 		
 
 game = Game()
@@ -365,6 +368,7 @@ logger.debug('Creating and activating test wave')
 c_gen = lambda : Creep(100,2,'NORMAL')
 wave = Wave(10, c_gen, 60)
 wave.path = game.path
+wave.active = True
 game.current_waves.append(wave)
 
 terminated = False
@@ -379,6 +383,11 @@ while not terminated:
 				game.make_path()
 				game.show_waypoints()
 				game.show_path()
+			elif event.key == pygame.K_w:
+				wave = Wave(10, c_gen, 60)
+				wave.path = game.path
+				wave.active = True
+				game.current_waves.append(wave)
 		elif event.type == pygame.MOUSEBUTTONDOWN:
 			if event.button == 1:
 				dragging = True
