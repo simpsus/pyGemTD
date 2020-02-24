@@ -368,6 +368,7 @@ wave.path = game.path
 game.current_waves.append(wave)
 
 terminated = False
+dragging = False
 while not terminated:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -379,11 +380,19 @@ while not terminated:
 				game.show_waypoints()
 				game.show_path()
 		elif event.type == pygame.MOUSEBUTTONDOWN:
-			tile = game.get_tile_for_position(pygame.mouse.get_pos())
-			if tile.type == BLOCKED:
-				tile.clear()
-			elif tile.type != WAYPOINT:
-				tile.block()
+			if event.button == 1:
+				dragging = True
+			elif event.button == 3:
+				tile = game.get_tile_for_position(pygame.mouse.get_pos())
+				if tile.type == BLOCKED and tile.type != WAYPOINT:
+					tile.clear()
+		elif event.type == pygame.MOUSEBUTTONUP:
+			if event.button == 1:
+				dragging = False
+	if dragging:
+		tile = game.get_tile_for_position(pygame.mouse.get_pos())
+		if tile.type != BLOCKED and tile.type != WAYPOINT:
+			tile.block()
 	game.update()
 	for b in background:
 		b.draw(display)
