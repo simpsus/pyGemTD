@@ -23,7 +23,7 @@ colors = {
 # a square screen makes for maximum maze possibilities. 1k might be too much vertically, though
 width = 1000
 height = 1000
-tile_multiplier = 10
+tile_multiplier = 25
 
 display = pygame.display.set_mode((width,height))
 pygame.display.set_caption('pyGemTowerDefense')
@@ -280,10 +280,12 @@ class Game(object):
 		for x in range(width//tile_multiplier):
 			for y in range(height//tile_multiplier):
 				self.grid[(x,y)] = Tile(x,y)
-		# define the waypoints
-		self.start = (0,5)
-		self.waypoints = [(10,5),(10,50),(90,50),(90,5),(50,5),(50,80)]
-		self.end = (99,80)
+		# define the waypoints, in relation to the tile_multiplier
+		self.start = (0,50//tile_multiplier)
+		self.waypoints = [(100//tile_multiplier,50//tile_multiplier),(100//tile_multiplier,500//tile_multiplier),\
+		(900//tile_multiplier,500//tile_multiplier),(900//tile_multiplier,50//tile_multiplier),\
+		(500//tile_multiplier,50//tile_multiplier),(500//tile_multiplier,800//tile_multiplier)]
+		self.end = (990//tile_multiplier,800//tile_multiplier)
 		self.path = []
 		# the waves currently active
 		self.current_waves = []
@@ -303,7 +305,7 @@ class Game(object):
 		result = []
 		coords = ((tile.x-1,tile.y),(tile.x+1,tile.y),(tile.x,tile.y-1),(tile.x,tile.y+1))
 		for (x,y) in coords:
-			if x < 0 or y < 0 or x > 99 or y > 99:
+			if x < 0 or y < 0 or x > (990//tile_multiplier) or y > (990//tile_multiplier):
 				continue
 			n = self.grid[(x,y)]
 			if n.type != BLOCKED:
