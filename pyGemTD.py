@@ -114,6 +114,15 @@ class Tile(object):
 		self.color = colors['ground']
 		self.type = FREE
 
+	def reset(self):
+		# does not change the type, resets the color to remove a path
+		if self.type == FREE:
+			self.color = colors['ground']
+		elif self.type == WAYPOINT:
+			self.color = colors['ground_waypoint']
+		elif self.type == BLOCKED:
+			self.color = colors['ground_blocked']	
+
 	def block(self):
 		self.color = colors['ground_blocked']
 		self.type = BLOCKED
@@ -336,13 +345,20 @@ class Game(object):
 		#print(self.path)
 
 	def show_path(self):
+		logger.debug('Showing Path Visualization.')
 		total = len(self.path)
 		for i, tile in enumerate(self.path):
 			c = round((i/total) * 255)
 			tile.path(color=(c,c,c))
 
+	def hide_path(self):
+		logger.debug('Hiding Path Visualization.')
+		for tile in self.path:
+			tile.reset()
+
 	def clear_path(self):
 		# blocked tiles cannot be cleared
+		logger.debug('Removing blocks from path tiles.')
 		for tile in self.path:
 			if tile.type != BLOCKED:
 				tile.clear()
@@ -379,15 +395,20 @@ while not terminated:
 			terminated = True
 		elif event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_SPACE:
+				# the path was updated in the gui, make it known
 				game.clear_path()
 				game.make_path()
 				game.show_waypoints()
 				game.show_path()
 			elif event.key == pygame.K_w:
+				# starts a new wave with the current path
 				w = Wave(10, c_gen, 60)
 				w.path = game.path
 				w.active = True
 				game.current_waves.append(w)
+			elif event.key == pygame.K_h:
+				# hides the current path
+				game.hide_path()
 		elif event.type == pygame.MOUSEBUTTONDOWN:
 			if event.button == 1:
 				dragging = True
