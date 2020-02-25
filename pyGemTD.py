@@ -363,6 +363,16 @@ class Game(object):
 			if tile.type != BLOCKED:
 				tile.clear()
 
+	def dump_path(self):
+		size = width // tile_multiplier
+		result = []
+		for j in range(size):
+			t = [None for i in range(size)]
+			result.append(t)
+		for (x,y), tile in self.grid.items():
+			result[x][y] = math.inf if tile.type == BLOCKED else 0
+		return result
+
 	def get_tile_for_position(self, pos):
 		return self.grid[(pos[0]//tile_multiplier,pos[1]//tile_multiplier)]
 
@@ -410,12 +420,19 @@ while not terminated:
 				# hides the current path
 				game.hide_path()
 			elif event.key == pygame.K_c:
+				# clear the path in the sense that it is reset to vanilla
 				for tile in [t for t in game.path if \
 				tile.type == BLOCKED and tile.type != WAYPOINT]:
 					tile.cear()
 				game.clear_path()
 				game.make_path()
 				game.show_path()
+			elif event.key == pygame.K_d:
+				# dump the current path to a format that is reusable
+				grid = game.dump_path()
+				logger.debug('START Dumping Grid')
+				logger.debug(grid)
+				logger.debug('END Dumping')
 		elif event.type == pygame.MOUSEBUTTONDOWN:
 			if event.button == 1:
 				dragging = True
