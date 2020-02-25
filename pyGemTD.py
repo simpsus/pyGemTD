@@ -290,10 +290,10 @@ class Game(object):
 			for y in range(height//tile_multiplier):
 				self.grid[(x,y)] = Tile(x,y)
 		# define the waypoints, in relation to the tile_multiplier
-		self.start = (0,50//tile_multiplier)
-		self.waypoints = [(100//tile_multiplier,50//tile_multiplier),(100//tile_multiplier,500//tile_multiplier),\
-		(900//tile_multiplier,500//tile_multiplier),(900//tile_multiplier,50//tile_multiplier),\
-		(500//tile_multiplier,50//tile_multiplier),(500//tile_multiplier,800//tile_multiplier)]
+		self.start = (0,125//tile_multiplier)
+		self.waypoints = [(125//tile_multiplier,125//tile_multiplier),(125//tile_multiplier,475//tile_multiplier),\
+		(825//tile_multiplier,475//tile_multiplier),(825//tile_multiplier,125//tile_multiplier),\
+		(475//tile_multiplier,125//tile_multiplier),(475//tile_multiplier,825//tile_multiplier)]
 		self.end = (990//tile_multiplier,800//tile_multiplier)
 		self.path = []
 		# the waves currently active
@@ -420,12 +420,13 @@ while not terminated:
 				# hides the current path
 				game.hide_path()
 			elif event.key == pygame.K_c:
-				# clear the path in the sense that it is reset to vanilla
-				for tile in [t for t in game.path if \
-				tile.type == BLOCKED and tile.type != WAYPOINT]:
-					tile.cear()
+				# clear the grid in the sense that it is reset to vanilla
+				for tile in game.grid.values():
+					if tile.type == BLOCKED:
+						tile.clear()
 				game.clear_path()
 				game.make_path()
+				game.show_waypoints()
 				game.show_path()
 			elif event.key == pygame.K_d:
 				# dump the current path to a format that is reusable
