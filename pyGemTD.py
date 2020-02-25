@@ -409,6 +409,13 @@ while not terminated:
 			elif event.key == pygame.K_h:
 				# hides the current path
 				game.hide_path()
+			elif event.key == pygame.K_c:
+				for tile in [t for t in game.path if \
+				tile.type == BLOCKED and tile.type != WAYPOINT]:
+					tile.cear()
+				game.clear_path()
+				game.make_path()
+				game.show_path()
 		elif event.type == pygame.MOUSEBUTTONDOWN:
 			if event.button == 1:
 				dragging = True
