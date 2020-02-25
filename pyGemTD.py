@@ -384,10 +384,10 @@ while not terminated:
 				game.show_waypoints()
 				game.show_path()
 			elif event.key == pygame.K_w:
-				wave = Wave(10, c_gen, 60)
-				wave.path = game.path
-				wave.active = True
-				game.current_waves.append(wave)
+				w = Wave(10, c_gen, 60)
+				w.path = game.path
+				w.active = True
+				game.current_waves.append(w)
 		elif event.type == pygame.MOUSEBUTTONDOWN:
 			if event.button == 1:
 				dragging = True
@@ -406,7 +406,8 @@ while not terminated:
 	for b in background:
 		b.draw(display)
 	# this is temporary for testing purpose
-	wave.draw(display)
+	for w in game.current_waves:
+		w.draw(display)
 	pygame.display.update()
 	clock.tick(60)
 
