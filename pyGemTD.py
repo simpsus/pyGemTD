@@ -389,14 +389,13 @@ game = Game()
 game.make_path()
 game.show_waypoints()
 game.show_path()
-
-logger.debug('Creating and activating test wave')
+logger.debug('SPACE calculates path and displays it.')
+logger.debug('w creates a wave and sends them along the current path.')
+logger.debug('h hides the current path (still there, just invisible).')
+logger.debug('c resets all blocked tiles and puts path to vanilla.')
+logger.debug('d dumps a representation of the current grid in console.')
+# anonymous helper function to create a creep
 c_gen = lambda : Creep(100,2,'NORMAL')
-wave = Wave(10, c_gen, 60)
-wave.path = game.path
-wave.active = True
-game.current_waves.append(wave)
-
 terminated = False
 dragging = False
 while not terminated:
