@@ -25,10 +25,7 @@ width = 1000
 height = 1000
 tile_multiplier = 25
 
-display = pygame.display.set_mode((width,height))
-pygame.display.set_caption('pyGemTowerDefense')
-clock = pygame.time.Clock()
-arial_font = pygame.font.SysFont('arial',10)
+
 
 # render queue for background entities
 background = []
@@ -423,84 +420,93 @@ class Game(object):
 		return (True, None)
 		
 
-game = Game()
-game.make_path()
-game.show_waypoints()
-game.show_path()
+if __name__ == '__main__':
 
-logger.debug('Creating and activating test wave')
-c_gen = lambda : Creep(100,2,'NORMAL')
-wave = Wave(10, c_gen, 60)
-wave.path = game.path
-wave.active = True
-game.current_waves.append(wave)
+	display = pygame.display.set_mode((width,height))
+	pygame.display.set_caption('pyGemTowerDefense')
+	clock = pygame.time.Clock()
+	arial_font = pygame.font.SysFont('arial',10)
 
-terminated = False
-dragging = False
-while not terminated:
-	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
-			terminated = True
-		elif event.type == pygame.KEYDOWN:
-			if event.key == pygame.K_SPACE:
-				# the path was updated in the gui, make it known
-				game.clear_path()
-				game.make_path()
-				game.show_waypoints()
-				game.show_path()
-			elif event.key == pygame.K_w:
-				# starts a new wave with the current path
-				w = Wave(10, c_gen, 60)
-				w.path = game.path
-				w.active = True
-				game.current_waves.append(w)
-			elif event.key == pygame.K_h:
-				# hides the current path
-				game.hide_path()
-			elif event.key == pygame.K_c:
-				# clear the grid in the sense that it is reset to vanilla
-				for tile in game.grid.values():
-					if tile.type == BLOCKED:
+	game = Game()
+	game.make_path()
+	game.show_waypoints()
+	game.show_path()
+
+	print (game.start, game.waypoints, game.end)
+
+	logger.debug('Creating and activating test wave')
+	c_gen = lambda : Creep(100,2,'NORMAL')
+	wave = Wave(10, c_gen, 60)
+	wave.path = game.path
+	wave.active = True
+	game.current_waves.append(wave)
+
+	terminated = False
+	dragging = False
+	while not terminated:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				terminated = True
+			elif event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_SPACE:
+					# the path was updated in the gui, make it known
+					game.clear_path()
+					game.make_path()
+					game.show_waypoints()
+					game.show_path()
+				elif event.key == pygame.K_w:
+					# starts a new wave with the current path
+					w = Wave(10, c_gen, 60)
+					w.path = game.path
+					w.active = True
+					game.current_waves.append(w)
+				elif event.key == pygame.K_h:
+					# hides the current path
+					game.hide_path()
+				elif event.key == pygame.K_c:
+					# clear the grid in the sense that it is reset to vanilla
+					for tile in game.grid.values():
+						if tile.type == BLOCKED:
+							tile.clear()
+					game.clear_path()
+					game.make_path()
+					game.show_waypoints()
+					game.show_path()
+				elif event.key == pygame.K_d:
+					# dump the current path to a format that is reusable
+					grid = game.dump_path()
+					logger.debug('START Dumping Grid')
+					logger.debug(grid)
+					logger.debug('END Dumping')
+			elif event.type == pygame.MOUSEBUTTONDOWN:
+				if event.button == 1:
+					dragging = True
+				elif event.button == 3:
+					tile = game.get_tile_for_position(pygame.mouse.get_pos())
+					if tile.type == BLOCKED and tile.type != WAYPOINT:
 						tile.clear()
-				game.clear_path()
-				game.make_path()
-				game.show_waypoints()
-				game.show_path()
-			elif event.key == pygame.K_d:
-				# dump the current path to a format that is reusable
-				grid = game.dump_path()
-				logger.debug('START Dumping Grid')
-				logger.debug(grid)
-				logger.debug('END Dumping')
-		elif event.type == pygame.MOUSEBUTTONDOWN:
-			if event.button == 1:
-				dragging = True
-			elif event.button == 3:
-				tile = game.get_tile_for_position(pygame.mouse.get_pos())
-				if tile.type == BLOCKED and tile.type != WAYPOINT:
+			elif event.type == pygame.MOUSEBUTTONUP:
+				if event.button == 1:
+					dragging = False
+		if dragging:
+			tile = game.get_tile_for_position(pygame.mouse.get_pos())
+			if tile.type != BLOCKED and tile.type != WAYPOINT:
+				tile.block()
+				# after blocking it, check if it is still a valid grid
+				valid = game.is_valid_grid()
+				if not valid[0]:
+					#clear the tile and display an animation as feedback
 					tile.clear()
-		elif event.type == pygame.MOUSEBUTTONUP:
-			if event.button == 1:
-				dragging = False
-	if dragging:
-		tile = game.get_tile_for_position(pygame.mouse.get_pos())
-		if tile.type != BLOCKED and tile.type != WAYPOINT:
-			tile.block()
-			# after blocking it, check if it is still a valid grid
-			valid = game.is_valid_grid()
-			if not valid[0]:
-				#clear the tile and display an animation as feedback
-				tile.clear()
-				logger.debug('Blocking tile ' + str(tile) + \
-					' would block access to ' + str(valid[1]))
-				BlinkingTileAnimation(tile)
-	game.update()
-	for b in background:
-		b.draw(display)
-	# this is temporary for testing purpose
-	for w in game.current_waves:
-		w.draw(display)
-	pygame.display.update()
-	clock.tick(60)
+					logger.debug('Blocking tile ' + str(tile) + \
+						' would block access to ' + str(valid[1]))
+					BlinkingTileAnimation(tile)
+		game.update()
+		for b in background:
+			b.draw(display)
+		# this is temporary for testing purpose
+		for w in game.current_waves:
+			w.draw(display)
+		pygame.display.update()
+		clock.tick(60)
 
-pygame.quit()
+	pygame.quit()
