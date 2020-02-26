@@ -89,6 +89,25 @@ def A_star(start, goal, h, d, ne):
 					openSet.add(neighbor)
 	return False
 
+class BlinkingTileAnimation(object):
+
+	def __init__(self, tile):
+		self.tile = tile
+		background.append(self)
+		self.timer = 0
+		self.colors = (colors['ground'], pygame.Color('#000000'))
+		self.flick = 0
+
+	def draw(self, surface):
+		self.timer += 1
+		if self.timer == 60:
+			tile.color = colors['ground']
+			background.remove(self)
+		elif self.timer % 10 == 0:
+			self.flick = 0 if self.flick == 1 else 1
+			tile.color = self.colors[self.flick]
+
+
 class Tile(object):
 	"""
 	A Tile is 10 px square on the board and the smallest buildable unit
@@ -383,6 +402,25 @@ class Game(object):
 			if not wave.active:
 				logger.debug(str(wave) + ' is no longer active')
 		self.current_waves = [w for w in self.current_waves if w.active]
+
+	def is_valid_grid(self):
+		# returns a tuple with a boolean. If the boolean is false, the 
+		# second item is the tile that is not reachable
+		wp = [self.start] + self.waypoints + [self.end]
+		path = []
+		for i in range(len(wp) - 1):
+			a = self.grid[wp[i]]
+			b = self.grid[wp[i+1]]
+			search = A_star(
+				a,
+				b,
+				lambda w: cartesian_distance((a.x, a.y),(w.x, w.y)),
+				lambda w1,w2: cartesian_distance((w1.x, w1.y),(w2.x,w2.y)),
+				lambda w: self.get_neighbor(w)
+				)
+			if search == False:
+				return (False, self.grid[wp[i+1]])
+		return (True, None)
 		
 
 game = Game()
@@ -448,6 +486,14 @@ while not terminated:
 		tile = game.get_tile_for_position(pygame.mouse.get_pos())
 		if tile.type != BLOCKED and tile.type != WAYPOINT:
 			tile.block()
+			# after blocking it, check if it is still a valid grid
+			valid = game.is_valid_grid()
+			if not valid[0]:
+				#clear the tile and display an animation as feedback
+				tile.clear()
+				logger.debug('Blocking tile ' + str(tile) + \
+					' would block access to ' + str(valid[1]))
+				BlinkingTileAnimation(tile)
 	game.update()
 	for b in background:
 		b.draw(display)
