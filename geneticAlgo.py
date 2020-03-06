@@ -10,11 +10,17 @@ class Individual(object):
     # an Individual is a gridm of zero/math.inf values
 
     grid_size = 40
+    mutation_prob = 0.1
 
     def __init__(self):
         self.grid = []
         self.fitness = 0
         self.is_valid = False
+
+    def initialize(self):
+        for x in range(Individual.grid_size):
+            self.grid.append([0 for y in range(Individual.grid_size)])
+            
 
     def get_neighbor(self, c):
         x,y = c
@@ -61,10 +67,42 @@ class Individual(object):
 
     def randomize(self):
         while not self.is_valid:
+            i += 1
             self.grid = []
             for x in range(Individual.grid_size):
                 self.grid.append([self.get_random() for y in range(Individual.grid_size)])
             self.calculate_fitness()
+        logger.debug('Randomized ' + str(self) + ' after ' + str(i) + ' tries.')
+
+    def mutate(self):
+        for x,line in enumerate(self.grid):
+            for y,cell in enumerate(line):
+                if random.random() < Individual.mutation_prob:
+                    store = cell
+                    self.grid[x][y] = 0 if cell == math.inf else math.inf
+                    self.calculate_fitness()
+                    if not self.is_valid:
+                        self.grid[x][y] = store
+                        self.calculate_fitness()
+
+    def clone(self):
+        clone = Individual()
+        clone.grid = self.grid[:]
+        clone.calculate_fitness()
+        return clone
+
+    def crossover(self, other):
+        # strategy is to use as many blocks as possible without becoming invalid
+        child = Individual()
+        child.initialize()
+        for x, line in enumerate(self.grid):
+            for y, cell in enumerate(line):
+                child.grid[x][y] = math.inf if (self.grid[x][y] == math.inf or other.grid[x][y] == math.inf) else 0
+                child.calculate_fitness()
+                if not child.is_valid:
+                    child.grid[x][y] = 0
+        child.calculate_fitness()
+        return child
 
     def __repr__(self):
         return str(id(self)) + '@' + str(self.fitness)
@@ -135,7 +173,8 @@ class Population(object):
             i = Individual()
             i.randomize()
             self.individuals.append(i)
-            logger.debug('Individual #' + str(s))
+        logger.debug('Finished Population initialization')
+        self.individuals.sort(key=lambda i: i.fitness, reverse=True)
 
     def evolve(self):
         # advance to the next generation
