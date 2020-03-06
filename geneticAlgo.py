@@ -1,7 +1,8 @@
-from pyGemTD import A_star, cartesian_distance
+from pyGemTD import A_star, cartesian_distance, Game
 import math
 import random
 import logging
+import pygame
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(funcName)s %(lineno)d %(message)s')
 logger = logging.getLogger('genetic')
 
@@ -22,6 +23,13 @@ class Individual(object):
         result = [i for i in result if i[1] >= 0 and i[1]<len(self.grid)]
         result = [i for i in result if self.grid[i[0]][i[1]] == 0]
         return result
+
+    def clone(self):
+        clone = Individual()
+        clone.grid = self.grid[:]
+        clone.fitness = self.fitness
+        clone.is_valid = self.is_valid
+        return clone
 
     def calculate_fitness(self):
         # calculates not only the fitness but also sets the is_valid flag
@@ -44,25 +52,82 @@ class Individual(object):
         self.is_valid = True
         self.fitness = result
 
+    def get_random(self):
+        r = random.random()
+        if r < 0.3:
+            return math.inf
+        return 0
+        #return random.choice([0,0,math.inf])
+
     def randomize(self):
-        i = 0
         while not self.is_valid:
-            print(str(i))
-            i += 1
             self.grid = []
             for x in range(Individual.grid_size):
-                self.grid.append([random.choice([0,0,math.inf]) for y in range(Individual.grid_size)])
+                self.grid.append([self.get_random() for y in range(Individual.grid_size)])
             self.calculate_fitness()
 
     def __repr__(self):
         return str(id(self)) + '@' + str(self.fitness)
 
+    def gradient_flip(self, tries=100):
+        # flip a tile and keep it if the fitness increases
+        # will climb the current slope, so a recipe for local optima
+        f = self.fitness
+        for t in range(tries):
+            cf = self.fitness
+            x = random.randrange(Individual.grid_size)
+            y = random.randrange(Individual.grid_size)
+            self.flip(x,y)
+            if self.fitness <= cf:
+                # it did not do anything, flip it back
+                self.flip(x,y)
+        logger.debug(str(self) + ' gradient flipped for ' + str(self.fitness - f))
+
+    def mutate(self, tries = 50):
+        # same as gradient_flip but without the requirement to increase 
+        # the fitness
+        f = self.fitness
+        for t in range(tries):
+            cf = self.fitness
+            x = random.randrange(Individual.grid_size)
+            y = random.randrange(Individual.grid_size)
+            self.flip(x,y)
+        logger.debug(str(self) + ' mutated for ' + str(self.fitness - f))
+
+    def flip(self, x, y):
+        old_fitness = self.fitness
+        self.grid[x][y] = 0 if self.grid[x][y] > 0 else math.inf
+        self.calculate_fitness()
+        if not self.is_valid:
+            # unlock the tile and reset the fitness
+            self.grid[x][y] = 0
+            self.fitness = old_fitness
+
+    def show_window(self):
+        display = pygame.display.set_mode((1000,1000))
+        game = Game()
+        for (x,y), tile in game.grid.items():
+            if self.grid[x][y] > 0:
+                tile.block()
+        game.show_waypoints()
+        game.make_path()
+        game.show_path()
+        for tile in game.grid.values():
+            tile.draw(display)
+        pygame.display.update()
+        terminated = False
+        while not terminated:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    terminated = True
+
 class Population(object):
 
-    size = 20
+    size = 10
 
     def __init__(self):
         self.individuals = []
+        self.generation = 1
 
     def initialize(self):
         logger.debug('Starting Population initialization')
@@ -72,6 +137,32 @@ class Population(object):
             self.individuals.append(i)
             logger.debug('Individual #' + str(s))
 
+    def evolve(self):
+        # advance to the next generation
+        self.sort()
+        # two times clone the leader and gradient_flip it
+        winner = self.individuals[0]
+        for pos in [-1,-2]:
+            clone = winner.clone()
+            clone.gradient_flip()
+            self.individuals[pos] = clone
+        # mutate a clone of the winner
+        clone = winner.clone()
+        clone.mutate()
+        self.individuals[-3] = clone
+        # gradient_flip the second
+        self.individuals[1].gradient_flip()
+        # mutate the third and fourth
+        self.individuals[2].mutate()
+        self.individuals[3].mutate()
+        self.sort()
+        self.generation += 1
+
+
+    def sort(self):
+        self.individuals.sort(key=lambda i: i.fitness, reverse=True)
+
+
     def repr_fitness(self):
         return str(self.individuals)
                 
@@ -80,7 +171,12 @@ if __name__ == '__main__':
     i = Individual()
     i.grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, 0, math.inf, math.inf, math.inf, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, 0, math.inf, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, math.inf, math.inf, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, math.inf, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, 0, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, math.inf, 0, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, math.inf, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, math.inf, 0, 0, math.inf, 0, 0, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, math.inf, 0, math.inf, 0, math.inf, math.inf, math.inf, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, math.inf, 0, math.inf, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, math.inf, 0, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, math.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
     i.calculate_fitness()
-    
+    #i.show_window()
     p = Population()
     p.initialize()
-    print(p.repr_fitness())
+    for g in range(5):
+        p.evolve()
+        winner = p.individuals[0]
+        winner.show_window()
+        logger.debug(winner.grid)
+        logger.debug(p.repr_fitness())

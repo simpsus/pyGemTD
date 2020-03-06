@@ -24,8 +24,8 @@ colors = {
 width = 1000
 height = 1000
 tile_multiplier = 25
-
-
+arial_font = pygame.font.SysFont('arial',10)
+clock = pygame.time.Clock()
 
 # render queue for background entities
 background = []
@@ -425,8 +425,8 @@ if __name__ == '__main__':
 
 	display = pygame.display.set_mode((width,height))
 	pygame.display.set_caption('pyGemTowerDefense')
-	clock = pygame.time.Clock()
-	arial_font = pygame.font.SysFont('arial',10)
+	
+	#arial_font = pygame.font.SysFont('arial',10)
 
 	game = Game()
 	game.make_path()
