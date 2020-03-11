@@ -418,7 +418,15 @@ class Game(object):
 			if search == False:
 				return (False, self.grid[wp[i+1]])
 		return (True, None)
-		
+
+	def build_tower_event(self, tile):
+		# if the tile is not already blocked, block it and see if the 
+		# grid is still valid
+		if tile.type != BLOCKED:
+			tile.block()
+		if not self.is_valid_grid():
+			tile.clear()
+			BlinkingTileAnimation(tile)
 
 
 if __name__ == '__main__':
@@ -483,6 +491,10 @@ if __name__ == '__main__':
 					logger.debug('START Dumping Grid')
 					logger.debug(grid)
 					logger.debug('END Dumping')
+				elif event.key == pygame.K_t:
+					# we want to build a tower
+					tile = game.get_tile_for_position(pygame.mouse.get_pos())
+					game.build_tower_event(tile)
 			elif event.type == pygame.MOUSEBUTTONDOWN:
 				if event.button == 1:
 					dragging = True
